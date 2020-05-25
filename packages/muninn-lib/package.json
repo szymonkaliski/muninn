@@ -1,0 +1,20 @@
+{
+  "name": "muninn-lib",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "Szymon Kaliski <hi@szymonkaliski.com> (http://szymonkaliski.com)",
+  "license": "MIT",
+  "dependencies": {
+    "better-sqlite3": "^7.0.1",
+    "env-paths": "^2.2.0",
+    "glob": "^7.1.6",
+    "md5": "^2.2.1",
+    "mkdirp": "^1.0.4",
+    "yargs": "^15.3.1"
+  }
+}
