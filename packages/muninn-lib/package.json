@@ -12,9 +12,16 @@
   "dependencies": {
     "better-sqlite3": "^7.0.1",
     "env-paths": "^2.2.0",
+    "frontmatter": "0.0.3",
     "glob": "^7.1.6",
     "md5": "^2.2.1",
     "mkdirp": "^1.0.4",
+    "remark-parse": "^8.0.2",
+    "unified": "^9.0.0",
+    "unist-util-visit-parents": "^3.0.2",
     "yargs": "^15.3.1"
+  },
+  "devDependencies": {
+    "rimraf": "^3.0.2"
   }
 }
