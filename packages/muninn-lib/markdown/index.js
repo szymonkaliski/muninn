@@ -19,7 +19,7 @@ const parse = (text) => {
 };
 
 const findMeaningfulParent = (parents) => {
-  const parentTypes = ["listItem", "blockquote", "paragraph"];
+  const parentTypes = ["blockquote", "paragraph", "listItem"];
 
   return parents[
     chain(parentTypes)
@@ -30,6 +30,8 @@ const findMeaningfulParent = (parents) => {
   ];
 };
 
+const unescapePath = (path) => path.replace(/\\\ /g, " ");
+
 const findLinks = ({ mdast, path: filePath, root }) => {
   const links = [];
 
@@ -38,10 +40,10 @@ const findLinks = ({ mdast, path: filePath, root }) => {
   visit(mdast, (node, parents) => {
     if (node.type === "link") {
       if (!isAbsoluteUrl(node.url)) {
-        const linkedFile = path.join(containingFolder, node.url);
+        const linkedFile = path.join(containingFolder, unescapePath(node.url));
 
         links.push({
-          path: linkedFile.replace(root, ''),
+          path: linkedFile.replace(root, ""),
           mdast: findMeaningfulParent(parents),
         });
       }
@@ -51,4 +53,20 @@ const findLinks = ({ mdast, path: filePath, root }) => {
   return links;
 };
 
-module.exports = { parse, findLinks };
+const findTags = ({ mdast }) => {
+  const tags = [];
+
+  visit(mdast, (node, parents) => {
+    if (node.type === "tag") {
+      tags.push({
+        name: node.tagName,
+        value: node.tagValue,
+        mdast: findMeaningfulParent(parents),
+      });
+    }
+  });
+
+  return tags;
+};
+
+module.exports = { parse, findLinks, findTags };

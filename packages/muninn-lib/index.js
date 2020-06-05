@@ -6,10 +6,9 @@ const glob = require("glob");
 const md5 = require("md5");
 const mkdirp = require("mkdirp");
 const path = require("path");
-const { get, chain } = require("lodash");
+const { get, chain, identity } = require("lodash");
 
-const markdown = require("./markdown");
-const { findLinks } = markdown;
+const { findLinks, findTags, parse: parseMarkdown } = require("./markdown");
 
 const CACHE_PATH = envPaths("muninn").cache;
 
@@ -23,7 +22,7 @@ const parseNote = ({ mtime, filePath, fullPath }) => {
   const content = fs.readFileSync(fullPath, "utf-8");
   const id = md5(content);
   const front = frontmatter(content);
-  const mdast = markdown.parse(front.content);
+  const mdast = parseMarkdown(front.content);
 
   let title = get(front, ["data", "title"]);
 
@@ -38,7 +37,7 @@ const parseNote = ({ mtime, filePath, fullPath }) => {
   return { id, mtime, path: filePath, text: content, title, mdast };
 };
 
-const cache = (root, callback) => {
+const createDB = (root) => {
   mkdirp(CACHE_PATH);
 
   const dbName = md5(root);
@@ -52,7 +51,7 @@ const cache = (root, callback) => {
       path  TEXT NOT NULL,
       text  TEXT NOT NULL,
       mdast TEXT NOT NULL,
-      title TEXT
+      title TEXT NOT NULL
     )
     `
   ).run();
@@ -70,6 +69,23 @@ const cache = (root, callback) => {
     `
   ).run();
 
+  db.prepare(
+    `
+    CREATE TABLE IF NOT EXISTS tags (
+      id    TEXT NOT NULL,
+      name  TEXT NOT NULL,
+      value TEXT,
+      mdast TEXT NOT NULL,
+
+      FOREIGN KEY (id) REFERENCES notes (id)
+    )
+    `
+  ).run();
+
+  return db;
+};
+
+const upsertNotes = ({ db, root }, files) => {
   const searchNoteByPath = db.prepare(`SELECT * FROM notes WHERE path = ?`);
 
   const searchNoteByPathMtime = db.prepare(
@@ -81,63 +97,116 @@ const cache = (root, callback) => {
     VALUES                       (:id, :mtime, :path, :text, :mdast, :title)
   `);
 
+  const batchInsertNotes = db.transaction((data) => {
+    data.forEach((d) => insertNote.run(d));
+  });
+
+  const newNotes = [];
+
+  for (const filePath of files) {
+    const fullPath = path.join(root, filePath);
+    const mtime = fs.statSync(fullPath).mtimeMs;
+
+    const match = searchNoteByPathMtime.get(filePath, mtime);
+
+    if (!match) {
+      newNotes.push(parseNote({ mtime, filePath, fullPath }));
+    }
+  }
+
+  batchInsertNotes(
+    newNotes.map((d) => ({
+      ...d,
+      mdast: JSON.stringify(d.mdast),
+    }))
+  );
+
+  return newNotes;
+};
+
+const upsertLinks = ({ db, root }, newNotes) => {
+  const searchNoteByPath = db.prepare(`SELECT * FROM notes WHERE path = ?`);
+
   const insertLink = db.prepare(`
     INSERT OR REPLACE INTO links ( fromid,  toid,  mdast)
     VALUES                       (:fromid, :toid, :mdast)
   `);
 
-  const batchInsertNote = db.transaction((data) => {
-    data.forEach((d) => insertNote.run(d));
-  });
-
-  const batchInsertLink = db.transaction((data) => {
+  const batchInsertLinks = db.transaction((data) => {
     data.forEach((d) => insertLink.run(d));
   });
 
-  const toInsert = [];
+  const linksToInsert = chain(newNotes)
+    .flatMap((d) =>
+      findLinks({ mdast: d.mdast, path: d.path, root }).map((l) => [d.id, l])
+    )
+    .map(([fromid, { path, mdast }]) => {
+      const toid = get(searchNoteByPath.get(path), "id");
 
-  getFiles(root, (err, files) => {
-    for (const filePath of files) {
-      const fullPath = path.join(root, filePath);
-      const mtime = fs.statSync(fullPath).mtimeMs;
-
-      const match = searchNoteByPathMtime.get(filePath, mtime);
-
-      if (!match) {
-        const data = parseNote({ mtime, filePath, fullPath });
-
-        toInsert.push(data);
+      if (!toid) {
+        console.log(`[link] issue getting id for ${path}`);
+        return null;
       }
+
+      return {
+        fromid,
+        toid,
+        mdast: JSON.stringify(mdast),
+      };
+    })
+    .filter(identity)
+    .value();
+
+  batchInsertLinks(linksToInsert);
+};
+
+const upsertTags = ({ db }, newNotes) => {
+  const searchNoteByPath = db.prepare(`SELECT * FROM notes WHERE path = ?`);
+
+  const insertTag = db.prepare(`
+    INSERT OR REPLACE INTO tags ( id,  name,  value,  mdast)
+    VALUES                      (:id, :name, :value, :mdast)
+  `);
+
+  const batchInsertTags = db.transaction((data) => {
+    data.forEach((d) => insertTag.run(d));
+  });
+
+  const tagsToInsert = chain(newNotes)
+    .flatMap((d) =>
+      findTags({ mdast: d.mdast }).map(({ name, value, mdast }) => ({
+        id: d.id,
+        name,
+        value,
+        mdast: JSON.stringify(mdast),
+      }))
+    )
+    .value();
+
+  // console.log({ tagsToInsert });
+
+  batchInsertTags(tagsToInsert);
+};
+
+const cache = (root, callback) => {
+  const db = createDB(root);
+
+  getFiles(root, (error, files) => {
+    const params = { db, root };
+
+    if (error) {
+      throw error;
     }
 
-    if (toInsert.length > 0) {
-      batchInsertNote(
-        toInsert.map((d) => ({
-          ...d,
-          mdast: JSON.stringify(d.mdast),
-        }))
-      );
+    const newNotes = upsertNotes(params, files);
 
-      const links = chain(toInsert)
-        .flatMap((d) => {
-          return findLinks({ mdast: d.mdast, path: d.path, root }).map((l) => [
-            d.id,
-            l,
-          ]);
-        })
-        .map(([fromid, { path, mdast }]) => {
-          const toid = searchNoteByPath.get(path).id;
-
-          return {
-            fromid,
-            toid,
-            mdast: JSON.stringify(mdast),
-          };
-        })
-        .value();
-
-      batchInsertLink(links);
+    if (newNotes.length === 0) {
+      callback();
     }
+
+    upsertLinks(params, newNotes);
+    upsertTags(params, newNotes);
+    // TODO: text-based backlinks
 
     callback();
   });

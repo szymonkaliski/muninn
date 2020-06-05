@@ -2,10 +2,8 @@ const muninn = require("../");
 const path = require("path");
 const rimraf = require("rimraf");
 
-const TEST_DATA_PATH = path.join(__dirname, "/data/");
-const WIKI_DATA_PATH = "/Users/szymon/Documents/Dropbox/Wiki";
-
-const REPO = TEST_DATA_PATH;
+const REPO = path.join(__dirname, "/data/");
+// const REPO = "/Users/szymon/Documents/Dropbox/Wiki/";
 
 console.time("run");
 
