@@ -4,6 +4,7 @@ const rimraf = require("rimraf");
 
 const REPO = path.join(__dirname, "/data/");
 // const REPO = "/Users/szymon/Documents/Dropbox/Wiki/";
+//
 
 console.time("run");
 

@@ -2,7 +2,8 @@ const markdown = require("remark-parse");
 const path = require("path");
 const unified = require("unified");
 const visit = require("unist-util-visit-parents");
-const { chain, get, last, findLastIndex, identity } = require("lodash");
+const map = require("unist-util-map");
+const { chain, get, last, findLastIndex, identity, omit } = require("lodash");
 
 const remarkTags = require("./remark-tags");
 
@@ -19,7 +20,7 @@ const parse = (text) => {
 };
 
 const findMeaningfulParent = (parents) => {
-  const parentTypes = ["blockquote", "paragraph", "listItem"];
+  const parentTypes = ["heading", "blockquote", "paragraph", "listItem"];
 
   return parents[
     chain(parentTypes)
@@ -31,6 +32,8 @@ const findMeaningfulParent = (parents) => {
 };
 
 const unescapePath = (path) => path.replace(/\\\ /g, " ");
+
+const cleanMdast = (mdast) => map(mdast, (node) => omit(node, ["position"]));
 
 const findLinks = ({ mdast, path: filePath, root }) => {
   const links = [];
@@ -44,7 +47,7 @@ const findLinks = ({ mdast, path: filePath, root }) => {
 
         links.push({
           path: linkedFile.replace(root, ""),
-          mdast: findMeaningfulParent(parents),
+          mdast: cleanMdast(findMeaningfulParent(parents)),
         });
       }
     }
@@ -61,7 +64,7 @@ const findTags = ({ mdast }) => {
       tags.push({
         name: node.tagName,
         value: node.tagValue,
-        mdast: findMeaningfulParent(parents),
+        mdast: cleanMdast(findMeaningfulParent(parents)),
       });
     }
   });
@@ -69,4 +72,20 @@ const findTags = ({ mdast }) => {
   return tags;
 };
 
-module.exports = { parse, findLinks, findTags };
+const findText = ({ mdast, text }) => {
+  const matches = [];
+
+  const regex = new RegExp(`(^| )${text}`, "ig");
+
+  visit(mdast, (node, parents) => {
+    if (node.type !== "code" && node.value && node.value.match(regex)) {
+      matches.push({
+        mdast: cleanMdast(findMeaningfulParent(parents)),
+      });
+    }
+  });
+
+  return matches;
+};
+
+module.exports = { parse, findLinks, findTags, findText };

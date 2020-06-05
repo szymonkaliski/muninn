@@ -6,36 +6,16 @@ const glob = require("glob");
 const md5 = require("md5");
 const mkdirp = require("mkdirp");
 const path = require("path");
-const { get, chain, identity } = require("lodash");
+const { get, chain, identity, flatten } = require("lodash");
 
-const { findLinks, findTags, parse: parseMarkdown } = require("./markdown");
+const {
+  findLinks,
+  findTags,
+  findText,
+  parse: parseMarkdown,
+} = require("./markdown");
 
 const CACHE_PATH = envPaths("muninn").cache;
-
-console.log({ CACHE_PATH });
-
-const getFiles = (root, callback) => {
-  glob("**/*.md", { cwd: root }, callback);
-};
-
-const parseNote = ({ mtime, filePath, fullPath }) => {
-  const content = fs.readFileSync(fullPath, "utf-8");
-  const id = md5(content);
-  const front = frontmatter(content);
-  const mdast = parseMarkdown(front.content);
-
-  let title = get(front, ["data", "title"]);
-
-  if (!title) {
-    if (front.content.startsWith("# ")) {
-      title = front.content.split("\n")[0].replace(/^# /, "");
-    } else {
-      title = path.basename(filePath).replace(/.md$/, "");
-    }
-  }
-
-  return { id, mtime, path: filePath, text: content, title, mdast };
-};
 
 const createDB = (root) => {
   mkdirp(CACHE_PATH);
@@ -59,9 +39,10 @@ const createDB = (root) => {
   db.prepare(
     `
     CREATE TABLE IF NOT EXISTS links (
-      fromid TEXT NOT NULL,
-      toid   TEXT NOT NULL,
-      mdast  TEXT NOT NULL,
+      fromid   TEXT   NOT NULL,
+      toid     TEXT   NOT NULL,
+      mdast    TEXT   NOT NULL,
+      backlink NUMBER NOT NULL,
 
       FOREIGN KEY (fromid) REFERENCES notes (id)
       FOREIGN KEY (toid)   REFERENCES notes (id)
@@ -86,6 +67,26 @@ const createDB = (root) => {
 };
 
 const upsertNotes = ({ db, root }, files) => {
+  const parseNote = ({ mtime, filePath, fullPath }) => {
+    const content = fs.readFileSync(fullPath, "utf-8");
+
+    const id = md5(fullPath); // id is hash of fullPath, as theoretically the same note can exist in multiple places
+    const front = frontmatter(content);
+    const mdast = parseMarkdown(front.content);
+
+    let title = get(front, ["data", "title"]);
+
+    if (!title) {
+      if (front.content.startsWith("# ")) {
+        title = front.content.split("\n")[0].replace(/^# /, "");
+      } else {
+        title = path.basename(filePath).replace(/.md$/, "");
+      }
+    }
+
+    return { id, mtime, path: filePath, text: content, title, mdast };
+  };
+
   const searchNoteByPath = db.prepare(`SELECT * FROM notes WHERE path = ?`);
 
   const searchNoteByPathMtime = db.prepare(
@@ -128,12 +129,12 @@ const upsertLinks = ({ db, root }, newNotes) => {
   const searchNoteByPath = db.prepare(`SELECT * FROM notes WHERE path = ?`);
 
   const insertLink = db.prepare(`
-    INSERT OR REPLACE INTO links ( fromid,  toid,  mdast)
-    VALUES                       (:fromid, :toid, :mdast)
+    INSERT OR REPLACE INTO links ( fromid,  toid,  mdast,  backlink)
+    VALUES                       (:fromid, :toid, :mdast, :backlink)
   `);
 
   const batchInsertLinks = db.transaction((data) => {
-    data.forEach((d) => insertLink.run(d));
+    data.forEach((d) => insertLink.run({ ...d, backlink: 0 }));
   });
 
   const linksToInsert = chain(newNotes)
@@ -160,6 +161,41 @@ const upsertLinks = ({ db, root }, newNotes) => {
   batchInsertLinks(linksToInsert);
 };
 
+const upsertBacklinks = ({ db, root }, newNotes) => {
+  const searchNotesByText = db.prepare(
+    `SELECT * FROM notes WHERE text LIKE ? COLLATE NOCASE`
+  );
+
+  const insertBacklink = db.prepare(`
+    INSERT OR REPLACE INTO links ( fromid,  toid,  mdast,  backlink)
+    VALUES                       (:fromid, :toid, :mdast, :backlink)
+  `);
+
+  const batchInsertBacklinks = db.transaction((data) => {
+    data.forEach((d) => insertBacklink.run({ ...d, backlink: 1 }));
+  });
+
+  const backlinksToInsert = chain(newNotes)
+    .flatMap(({ title, id: toid }) => {
+      return flatten(
+        searchNotesByText.all(`%${title}%`).map(({ mdast, id: fromid }) => {
+          const backlinks = findText({ mdast: JSON.parse(mdast), text: title });
+
+          return backlinks.map(({ mdast }) => ({
+            toid,
+            fromid,
+            mdast: JSON.stringify(mdast),
+          }));
+        })
+      );
+    })
+    .filter((d) => d.toid !== d.fromid)
+    .uniqBy((d) => d.mdast)
+    .value();
+
+  batchInsertBacklinks(backlinksToInsert);
+};
+
 const upsertTags = ({ db }, newNotes) => {
   const searchNoteByPath = db.prepare(`SELECT * FROM notes WHERE path = ?`);
 
@@ -183,15 +219,13 @@ const upsertTags = ({ db }, newNotes) => {
     )
     .value();
 
-  // console.log({ tagsToInsert });
-
   batchInsertTags(tagsToInsert);
 };
 
 const cache = (root, callback) => {
   const db = createDB(root);
 
-  getFiles(root, (error, files) => {
+  glob("**/*.md", { cwd: root }, (error, files) => {
     const params = { db, root };
 
     if (error) {
@@ -205,8 +239,10 @@ const cache = (root, callback) => {
     }
 
     upsertLinks(params, newNotes);
+    upsertBacklinks(params, newNotes);
     upsertTags(params, newNotes);
-    // TODO: text-based backlinks
+
+    // TODO: clear stale data
 
     callback();
   });

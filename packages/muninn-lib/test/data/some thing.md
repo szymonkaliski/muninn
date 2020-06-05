@@ -1,1 +1,3 @@
 - quite empty
+- writing about Journal
+- and some thing
