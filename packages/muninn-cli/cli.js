@@ -3,7 +3,8 @@
 const yargs = require("yargs");
 const { createDB, cache } = require("muninn-lib");
 
-const tasks = require("./src/tasks")
+const tasks = require("./src/tasks");
+const backlinks = require("./src/backlinks");
 
 const args = yargs
   .demandOption("root")
@@ -21,18 +22,18 @@ const args = yargs
       describe: "format output for vim",
     });
   })
-  // .command("backlinks", "find all notes related to given file", (yargs) => {
-  //   yargs.option("file", {
-  //     demandOption: true,
-  //     describe: "input file to search for backlinks",
-  //   });
+  .command("backlinks", "find all notes related to given file", (yargs) => {
+    yargs.option("file", {
+      demandOption: true,
+      describe: "input file to search for backlinks",
+    });
 
-  //   yargs.option("vim", {
-  //     default: false,
-  //     type: "boolean",
-  //     describe: "format output for vim",
-  //   });
-  // })
+    yargs.option("vim", {
+      default: false,
+      type: "boolean",
+      describe: "format output for vim",
+    });
+  })
   // .command(
   //   "get-asset",
   //   "downloads asset and returns markdown embed/link",
@@ -64,5 +65,7 @@ if (command === "cache") {
     process.exit(0);
   });
 } else if (command === "tasks") {
-  tasks(db, args)
+  tasks(db, args);
+} else if (command === "backlinks") {
+  backlinks(db, args);
 }

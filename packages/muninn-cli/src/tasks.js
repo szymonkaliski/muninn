@@ -34,11 +34,7 @@ module.exports = (db, args) => {
     const mdast = JSON.parse(d.mdast);
     const text = stringifyMdast(mdast);
 
-    return {
-      ...d,
-      mdast,
-      text,
-    };
+    return { ...d, mdast, text };
   });
 
   if (args.vim) {
