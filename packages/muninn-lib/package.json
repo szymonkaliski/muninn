@@ -17,6 +17,7 @@
     "md5": "^2.2.1",
     "mkdirp": "^1.0.4",
     "remark-parse": "^8.0.2",
+    "remark-stringify": "^8.0.0",
     "unified": "^9.0.0",
     "unist-util-map": "^2.0.1",
     "unist-util-visit-parents": "^3.0.2",

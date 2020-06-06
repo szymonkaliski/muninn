@@ -1,8 +1,9 @@
+const map = require("unist-util-map");
 const markdown = require("remark-parse");
 const path = require("path");
+const stringify = require("remark-stringify");
 const unified = require("unified");
 const visit = require("unist-util-visit-parents");
-const map = require("unist-util-map");
 const { chain, get, last, findLastIndex, identity, omit } = require("lodash");
 
 const remarkTags = require("./remark-tags");
@@ -33,7 +34,7 @@ const findMeaningfulParent = (parents) => {
 
 const unescapePath = (path) => path.replace(/\\\ /g, " ");
 
-const cleanMdast = (mdast) => map(mdast, (node) => omit(node, ["position"]));
+// const cleanMdast = (mdast) => map(mdast, (node) => omit(node, ["position"]));
 
 const findLinks = ({ mdast, path: filePath, root }) => {
   const links = [];
@@ -47,7 +48,7 @@ const findLinks = ({ mdast, path: filePath, root }) => {
 
         links.push({
           path: linkedFile.replace(root, ""),
-          mdast: cleanMdast(findMeaningfulParent(parents)),
+          mdast: findMeaningfulParent(parents),
         });
       }
     }
@@ -64,7 +65,7 @@ const findTags = ({ mdast }) => {
       tags.push({
         name: node.tagName,
         value: node.tagValue,
-        mdast: cleanMdast(findMeaningfulParent(parents)),
+        mdast: findMeaningfulParent(parents),
       });
     }
   });
@@ -80,7 +81,7 @@ const findText = ({ mdast, text }) => {
   visit(mdast, (node, parents) => {
     if (node.type !== "code" && node.value && node.value.match(regex)) {
       matches.push({
-        mdast: cleanMdast(findMeaningfulParent(parents)),
+        mdast: findMeaningfulParent(parents),
       });
     }
   });
@@ -88,4 +89,11 @@ const findText = ({ mdast, text }) => {
   return matches;
 };
 
-module.exports = { parse, findLinks, findTags, findText };
+const stringifyMdast = (mdast) => {
+  return unified()
+    .use(stringify, { listItemIndent: 1, fences: true })
+    .use(remarkTags)
+    .stringify(mdast);
+};
+
+module.exports = { parse, findLinks, findTags, findText, stringifyMdast };

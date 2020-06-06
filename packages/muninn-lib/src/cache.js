@@ -1,6 +1,7 @@
 const frontmatter = require("frontmatter");
 const fs = require("fs");
 const glob = require("glob");
+const md5 = require("md5");
 const path = require("path");
 const { get, chain, identity, flatten, difference } = require("lodash");
 
