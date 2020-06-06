@@ -143,7 +143,7 @@ const upsertBacklinks = ({ db, root }, newNotes) => {
       );
     })
     .filter((d) => d.toid !== d.fromid)
-    .uniqBy((d) => d.mdast)
+    .uniqBy((d) => d.toid + '-' + d.fromid + '-' + d.mdast)
     .value();
 
   batchInsertBacklinks(backlinksToInsert);

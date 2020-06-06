@@ -5,9 +5,6 @@ const { stringifyMdast } = require("muninn-lib/src/markdown");
 module.exports = (db, args) => {
   const targetPath = args.file.replace(`${args.root}/`, "");
 
-  console.log(args);
-  console.log({ targetPath });
-
   const targetId = db
     .prepare(`SELECT id FROM notes WHERE path = ?`)
     .get(targetPath).id;

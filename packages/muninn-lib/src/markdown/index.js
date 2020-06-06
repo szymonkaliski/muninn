@@ -76,10 +76,12 @@ const findTags = ({ mdast }) => {
 const findText = ({ mdast, text }) => {
   const matches = [];
 
-  const regex = new RegExp(`(^| )${text}`, "ig");
+  const regex = new RegExp(text, "ig");
 
   visit(mdast, (node, parents) => {
-    if (node.type !== "code" && node.value && node.value.match(regex)) {
+    const valueMatches = node.value && node.value.match(regex);
+
+    if (node.type !== "code" && valueMatches) {
       matches.push({
         mdast: findMeaningfulParent(parents),
       });
