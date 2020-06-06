@@ -2,14 +2,15 @@ const muninn = require("../");
 const path = require("path");
 const rimraf = require("rimraf");
 
-const REPO = path.join(__dirname, "/data/");
-// const REPO = "/Users/szymon/Documents/Dropbox/Wiki/";
-//
+// const REPO = path.join(__dirname, "/data/");
+const REPO = "/Users/szymon/Documents/Dropbox/Wiki/";
 
 console.time("run");
 
-rimraf.sync(`${muninn.CACHE_PATH}/*.db`);
+// rimraf.sync(`${muninn.CACHE_PATH}/*.db`);
 
-muninn.cache(REPO, () => {
+const db = muninn.createDB(REPO)
+
+muninn.cache(db, REPO, () => {
   console.timeEnd("run");
 });
