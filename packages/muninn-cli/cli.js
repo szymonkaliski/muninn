@@ -2,6 +2,7 @@
 
 const yargs = require("yargs");
 const { createDB, cache } = require("muninn-lib");
+const { isArray, last } = require("lodash");
 
 const tasks = require("./src/tasks");
 const backlinks = require("./src/backlinks");
@@ -46,26 +47,26 @@ const args = yargs
   //       });
   //   }
   // )
-  // .command("ui", "start web based ui", (yargs) => {
-  //   yargs.option("port", { default: 8080 });
-  // })
-  // .command("clear-cache", "clear cache, will be rebuilt on next command")
+  // .command("reset-cache", "resets cache")
   .demandCommand(1, "you need to provide a command")
   .help().argv;
 
 const [command] = args._;
 
-const db = createDB(args.root);
+let root = isArray(args.root) ? last(args.root) : args.root;
+root = root.endsWith("/") ? root : root + "/";
+
+const db = createDB(root);
 
 if (command === "cache") {
   console.time("cache");
 
-  cache(db, args.root, () => {
+  cache(db, root, () => {
     console.timeEnd("cache");
     process.exit(0);
   });
 } else if (command === "tasks") {
-  tasks(db, args);
+  tasks(db, { ...args, root });
 } else if (command === "backlinks") {
-  backlinks(db, args);
+  backlinks(db, { ...args, root });
 }
