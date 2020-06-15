@@ -1,4 +1,4 @@
-const TAG_REGEX = /^@(\w+)(\((.*)\))?/
+const TAG_REGEX = /^@(\w+)(\((.+?)\))?/
 
 function tokenizeTags(eat, value, silent) {
   const match = TAG_REGEX.exec(value);

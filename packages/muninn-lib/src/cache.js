@@ -115,6 +115,8 @@ const upsertLinks = ({ db, root }, newNotes) => {
 };
 
 const upsertBacklinks = ({ db, root }, newNotes) => {
+  const allNoteTitles = db.prepare(`SELECT id, title FROM notes`).all();
+
   const searchNotesByText = db.prepare(
     `SELECT * FROM notes WHERE text LIKE ? COLLATE NOCASE`
   );
@@ -128,7 +130,7 @@ const upsertBacklinks = ({ db, root }, newNotes) => {
     data.forEach((d) => insertBacklink.run({ ...d, backlink: 1 }));
   });
 
-  const backlinksToInsert = chain(newNotes)
+  const backlinksToNewNotes = chain(newNotes)
     .flatMap(({ title, id: toid }) => {
       return flatten(
         searchNotesByText.all(`%${title}%`).map(({ mdast, id: fromid }) => {
@@ -142,6 +144,27 @@ const upsertBacklinks = ({ db, root }, newNotes) => {
         })
       );
     })
+    .value();
+
+  const backlinksFromNewNotes = chain(allNoteTitles)
+    .flatMap(({ title, id: toid }) => {
+      return flatten(
+        newNotes.map(({ mdast, id: fromid }) => {
+          const backlinks = findText({ mdast, text: title });
+
+          return backlinks.map(({ mdast }) => ({
+            toid,
+            fromid,
+            mdast: JSON.stringify(mdast),
+          }));
+        })
+      );
+    })
+    .value();
+
+  const backlinksToInsert = chain(
+    backlinksToNewNotes.concat(backlinksFromNewNotes)
+  )
     .filter((d) => d.toid !== d.fromid)
     .uniqBy((d) => d.toid + "-" + d.fromid + "-" + d.mdast)
     .value();
@@ -215,6 +238,7 @@ const cache = (db, root, callback) => {
 
     if (newNotes.length === 0) {
       callback();
+      return;
     }
 
     upsertLinks(params, newNotes);
