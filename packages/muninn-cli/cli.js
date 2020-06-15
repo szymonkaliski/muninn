@@ -35,19 +35,6 @@ const args = yargs
       describe: "format output for vim",
     });
   })
-  // .command(
-  //   "get-asset",
-  //   "downloads asset and returns markdown embed/link",
-  //   (yargs) => {
-  //     yargs
-  //       .option("url", { demandOption: true, describe: "url to asset" })
-  //       .option("file", {
-  //         demandOption: true,
-  //         describe: "file where the asset will be added",
-  //       });
-  //   }
-  // )
-  // .command("reset-cache", "resets cache")
   .demandCommand(1, "you need to provide a command")
   .help().argv;
 
