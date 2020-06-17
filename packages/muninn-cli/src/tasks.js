@@ -22,6 +22,13 @@ module.exports = (db, args) => {
     ORDER BY tags.value;
   `);
 
+  const selectOverdue = db.prepare(`
+    SELECT notes.path, tags.value, tags.mdast
+    FROM tags JOIN notes ON tags.id = notes.id
+    WHERE tags.name = 'due' AND tags.value < ? AND json_extract(tags.mdast, '$.checked') = 0
+    ORDER BY tags.value;
+  `);
+
   const result =
     args.days === undefined
       ? selectAll.all(TODAY)
@@ -30,7 +37,11 @@ module.exports = (db, args) => {
           format(addDays(TODAY_DATE, args.days), DATE_FORMAT)
         );
 
-  const todos = result.map((d) => {
+  const overdue = args.overdue
+    ? selectOverdue.all(TODAY).map((d) => ({ ...d, isOverdue: true }))
+    : [];
+
+  const todos = [...overdue, ...result].map((d) => {
     const mdast = JSON.parse(d.mdast);
     const text = stringifyMdast(mdast);
 
@@ -50,8 +61,10 @@ module.exports = (db, args) => {
       .forEach((todos, date) => {
         const weekday = format(parse(date, DATE_FORMAT, Date.now()), "EEEE");
         const dateStr = date === TODAY ? "Today" : date;
+        const isOverdue = todos.some((d) => d.isOverdue);
+        const color = isOverdue ? "red" : "green";
 
-        console.log(`${chalk.green(dateStr)} ${chalk.grey(weekday)}`);
+        console.log(`${chalk[color](dateStr)} ${chalk.grey(weekday)}`);
 
         chain(todos)
           .groupBy((task) => task.path)

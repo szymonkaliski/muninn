@@ -11,6 +11,12 @@ const args = yargs
   .demandOption("root")
   .command("cache", "update cache")
   .command("tasks", "find tasks for specified timespan", (yargs) => {
+    yargs.option("overdue", {
+      default: true,
+      type: "boolean",
+      describe: "query overdue tasks",
+    });
+
     yargs.option("days", {
       default: undefined,
       type: "number",
