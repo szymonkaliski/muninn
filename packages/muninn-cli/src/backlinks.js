@@ -29,17 +29,23 @@ module.exports = (db, args) => {
 
       return { ...d, mdast, text };
     })
-    .value();
+    .sortBy([
+      "path",
+      "mdast.position.start.line",
+      "mdast.position.start.column",
+    ]);
 
   if (args.vim) {
-    backlinks.forEach(({ path, mdast, text }) => {
-      const { line, column } = mdast.position.start;
-      const firstLine = text.split("\n")[0];
+    backlinks
+      .forEach(({ path, mdast, text }) => {
+        const { line, column } = mdast.position.start;
+        const firstLine = text.split("\n")[0];
 
-      console.log([path, line, column, firstLine].join(":"));
-    });
+        console.log([path, line, column, firstLine].join(":"));
+      })
+      .value();
   } else {
-    chain(backlinks)
+    backlinks
       .groupBy("path")
       .entries()
       .forEach(([path, linked]) => {
