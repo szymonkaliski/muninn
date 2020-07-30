@@ -165,7 +165,7 @@ const upsertBacklinks = ({ db, root }, newNotes) => {
   const backlinksToInsert = chain(
     backlinksToNewNotes.concat(backlinksFromNewNotes)
   )
-    .filter((d) => d.toid !== d.fromid)
+    .filter((d) => d.toid !== d.fromid && !!d.mdast)
     .uniqBy((d) => d.toid + "-" + d.fromid + "-" + d.mdast)
     .value();
 
