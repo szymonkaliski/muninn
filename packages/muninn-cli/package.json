@@ -12,6 +12,6 @@
   "dependencies": {
     "chalk": "^4.0.0",
     "date-fns": "^2.14.0",
-    "muninn-lib": "^1.0.1"
+    "muninn-lib": "*"
   }
 }
