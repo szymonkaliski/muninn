@@ -1,6 +1,6 @@
 {
   "name": "muninn-cli",
-  "version": "2.1.1",
+  "version": "2.1.2",
   "description": "",
   "main": "index.js",
   "bin": {
@@ -12,6 +12,6 @@
   "dependencies": {
     "chalk": "^4.0.0",
     "date-fns": "^2.14.0",
-    "muninn-lib": "*"
+    "muninn-lib": "^1.0.2"
   }
 }
