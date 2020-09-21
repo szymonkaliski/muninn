@@ -7,27 +7,27 @@ const DATE_FORMAT = "yyyy-MM-dd";
 const TODAY_DATE = Date.now();
 const TODAY = format(TODAY_DATE, DATE_FORMAT);
 
+const createSelect = (whereClause) => `
+  SELECT notes.path, tags.value, tags.mdast
+  FROM tags JOIN notes ON tags.id = notes.id
+  WHERE ${whereClause}
+  ORDER BY tags.value, notes.path;
+`;
+
 module.exports = (db, args) => {
-  const selectAll = db.prepare(`
-    SELECT notes.path, tags.value, tags.mdast
-    FROM tags JOIN notes ON tags.id = notes.id
-    WHERE tags.name = 'due' AND tags.value >= ?
-    ORDER BY tags.value;
-  `);
+  const selectAll = db.prepare(
+    createSelect(`tags.name = 'due' AND tags.value >= ?`)
+  );
 
-  const selectBetween = db.prepare(`
-    SELECT notes.path, tags.value, tags.mdast
-    FROM tags JOIN notes ON tags.id = notes.id
-    WHERE tags.name = 'due' AND tags.value >= ? AND tags.value <= ?
-    ORDER BY tags.value;
-  `);
+  const selectBetween = db.prepare(
+    createSelect(`tags.name = 'due' AND tags.value >= ? AND tags.value <= ?`)
+  );
 
-  const selectOverdue = db.prepare(`
-    SELECT notes.path, tags.value, tags.mdast
-    FROM tags JOIN notes ON tags.id = notes.id
-    WHERE tags.name = 'due' AND tags.value < ? AND json_extract(tags.mdast, '$.checked') = 0
-    ORDER BY tags.value;
-  `);
+  const selectOverdue = db.prepare(
+    createSelect(
+      `tags.name = 'due' AND tags.value < ? AND json_extract(tags.mdast, '$.checked') = 0`
+    )
+  );
 
   const result =
     args.days === undefined
