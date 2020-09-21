@@ -11,6 +11,12 @@ const args = yargs
   .demandOption("root")
   .command("cache", "update cache")
   .command("tasks", "find tasks for specified timespan", (yargs) => {
+    yargs.option("show-done", {
+      default: false,
+      type: "boolean",
+      describe: "show done tasks",
+    });
+
     yargs.option("overdue", {
       default: true,
       type: "boolean",

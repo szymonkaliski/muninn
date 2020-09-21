@@ -41,22 +41,25 @@ module.exports = (db, args) => {
     ? selectOverdue.all(TODAY).map((d) => ({ ...d, isOverdue: true }))
     : [];
 
-  const todos = [...overdue, ...result].map((d) => {
-    const mdast = JSON.parse(d.mdast);
-    const text = stringifyMdast(mdast);
+  let todos = chain(overdue)
+    .concat(result)
+    .map((d) => {
+      const mdast = JSON.parse(d.mdast);
+      const text = stringifyMdast(mdast);
 
-    return { ...d, mdast, text };
-  });
+      return { ...d, mdast, text };
+    })
+    .filter(({ mdast }) => args.showDone || !mdast.checked);
 
   if (args.vim) {
-    todos.forEach(({ mdast, text, path }) => {
+    todos = todos.forEach(({ mdast, text, path }) => {
       const { line, column } = mdast.position.start;
       const firstLine = text.split("\n")[0];
 
       console.log([path, line, column, firstLine].join(":"));
     });
   } else {
-    chain(todos)
+    todos = todos
       .groupBy((task) => task.value)
       .forEach((todos, date) => {
         const weekday = format(parse(date, DATE_FORMAT, Date.now()), "EEEE");
@@ -88,7 +91,8 @@ module.exports = (db, args) => {
           .value();
 
         console.log();
-      })
-      .value();
+      });
   }
+
+  todos.value();
 };
