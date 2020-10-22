@@ -10,18 +10,18 @@
   "author": "Szymon Kaliski <hi@szymonkaliski.com> (http://szymonkaliski.com)",
   "license": "MIT",
   "dependencies": {
-    "better-sqlite3": "^7.0.1",
+    "better-sqlite3": "^7.1.1",
     "env-paths": "^2.2.0",
     "frontmatter": "0.0.3",
     "glob": "^7.1.6",
-    "md5": "^2.2.1",
+    "md5": "^2.3.0",
     "mkdirp": "^1.0.4",
-    "remark-parse": "^8.0.2",
-    "remark-stringify": "^8.0.0",
-    "unified": "^9.0.0",
+    "remark-parse": "^9.0.0",
+    "remark-stringify": "^9.0.0",
+    "unified": "^9.2.0",
     "unist-util-map": "^2.0.1",
-    "unist-util-visit-parents": "^3.0.2",
-    "yargs": "^15.3.1"
+    "unist-util-visit-parents": "^3.1.1",
+    "yargs": "^16.1.0"
   },
   "devDependencies": {
     "rimraf": "^3.0.2"

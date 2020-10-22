@@ -10,8 +10,8 @@
   "author": "Szymon Kaliski <hi@szymonkaliski.com> (http://szymonkaliski.com)",
   "license": "MIT",
   "dependencies": {
-    "chalk": "^4.0.0",
-    "date-fns": "^2.14.0",
+    "chalk": "^4.1.0",
+    "date-fns": "^2.16.1",
     "muninn-lib": "^1.0.2"
   }
 }
