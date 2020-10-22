@@ -3,36 +3,16 @@ const { chain } = require("lodash");
 const { stringifyMdast } = require("muninn-lib/src/markdown");
 
 const search = (db, args) => {
-  const target = args.target.replace(args.root, "");
-
-  const targetInDB = db
+  const results = db
     .prepare(
       `
-      SELECT id FROM notes WHERE path = :path OR title LIKE :title
+      SELECT * FROM notes WHERE text LIKE :text
       `
     )
-    .get({ path: target, title: target });
+    .all({ text: `%${args.text}%` });
 
-  if (!targetInDB) {
-    return [];
-  }
-
-  const targetId = targetInDB.id;
-
-  const query = db
-    .prepare(
-      `
-      SELECT links.fromid, links.mdast, notes.path
-      FROM notes JOIN links ON links.fromid = notes.id
-      WHERE links.toid = ?
-      `
-    )
-    .all(targetId);
-
-  const backlinks = chain(query)
-    .uniqBy((d) => {
-      return d.fromid + "-" + d.mdast;
-    })
+  return chain(results)
+    .uniqBy('path')
     .map((d) => {
       const mdast = JSON.parse(d.mdast);
       const text = stringifyMdast(mdast);
@@ -45,27 +25,25 @@ const search = (db, args) => {
       "mdast.position.start.column",
     ])
     .value();
-
-  return backlinks;
 };
 
 const render = (db, args) => {
-  const backlinks = search(db, args);
+  const results = search(db, args);
 
   if (args.vim) {
-    backlinks.forEach(({ path, mdast, text }) => {
+    results.forEach(({ path, mdast, text }) => {
       const { line, column } = mdast.position.start;
       const firstLine = text.split("\n")[0];
 
       console.log([path, line, column, firstLine].join(":"));
     });
   } else {
-    chain(backlinks)
+    chain(results)
       .groupBy("path")
       .entries()
-      .forEach(([path, linked]) => {
+      .forEach(([path, d]) => {
         console.log(`${chalk.blue(path)}:`);
-        linked.forEach(({ mdast, text }) => console.log(text));
+        d.forEach(({ mdast, text }) => console.log(text));
         console.log();
       })
       .value();

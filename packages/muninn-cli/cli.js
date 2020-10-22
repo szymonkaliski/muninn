@@ -4,12 +4,38 @@ const yargs = require("yargs");
 const { createDB, cache } = require("muninn-lib");
 const { isArray, last } = require("lodash");
 
-const tasks = require("./src/tasks");
 const backlinks = require("./src/backlinks");
+const search = require("./src/search");
+const tasks = require("./src/tasks");
 
 const args = yargs
   .demandOption("root")
   .command("cache", "update cache")
+  .command("backlinks", "find all notes related to given file", (yargs) => {
+    // TODO: seperate options for matching --file and --text
+    yargs.option("target", {
+      demandOption: true,
+      describe: "file or phrase to search for backlinks",
+    });
+
+    yargs.option("vim", {
+      default: false,
+      type: "boolean",
+      describe: "format output for vim",
+    });
+  })
+  .command("search", "find all notes matching given text search", (yargs) => {
+    yargs.option("text", {
+      demandOption: true,
+      describe: "text to search for",
+    });
+
+    yargs.option("vim", {
+      default: false,
+      type: "boolean",
+      describe: "format output for vim",
+    });
+  })
   .command("tasks", "find tasks for specified timespan", (yargs) => {
     yargs.option("show-done", {
       default: false,
@@ -35,18 +61,6 @@ const args = yargs
       describe: "format output for vim",
     });
   })
-  .command("backlinks", "find all notes related to given file", (yargs) => {
-    yargs.option("file", {
-      demandOption: true,
-      describe: "input file to search for backlinks",
-    });
-
-    yargs.option("vim", {
-      default: false,
-      type: "boolean",
-      describe: "format output for vim",
-    });
-  })
   .demandCommand(1, "you need to provide a command")
   .help().argv;
 
@@ -64,8 +78,10 @@ if (command === "cache") {
     console.timeEnd("cache");
     process.exit(0);
   });
-} else if (command === "tasks") {
-  tasks(db, { ...args, root });
 } else if (command === "backlinks") {
-  backlinks(db, { ...args, root });
+  backlinks.render(db, { ...args, root });
+} else if (command === "search") {
+  search.render(db, { ...args, root });
+} else if (command === "tasks") {
+  tasks.render(db, { ...args, root });
 }

@@ -14,7 +14,7 @@ const createSelect = (whereClause) => `
   ORDER BY tags.value, notes.path;
 `;
 
-module.exports = (db, args) => {
+const search = (db, args) => {
   const selectAll = db.prepare(
     createSelect(`tags.name = 'due' AND tags.value >= ?`)
   );
@@ -41,7 +41,7 @@ module.exports = (db, args) => {
     ? selectOverdue.all(TODAY).map((d) => ({ ...d, isOverdue: true }))
     : [];
 
-  let todos = chain(overdue)
+  const todos = chain(overdue)
     .concat(result)
     .map((d) => {
       const mdast = JSON.parse(d.mdast);
@@ -49,17 +49,24 @@ module.exports = (db, args) => {
 
       return { ...d, mdast, text };
     })
-    .filter(({ mdast }) => args.showDone || !mdast.checked);
+    .filter(({ mdast }) => args.showDone || !mdast.checked)
+    .value();
+
+  return todos;
+};
+
+const render = (db, args) => {
+  const todos = search(db, args);
 
   if (args.vim) {
-    todos = todos.forEach(({ mdast, text, path }) => {
+    todos.forEach(({ mdast, text, path }) => {
       const { line, column } = mdast.position.start;
       const firstLine = text.split("\n")[0];
 
       console.log([path, line, column, firstLine].join(":"));
     });
   } else {
-    todos = todos
+    chain(todos)
       .groupBy((task) => task.value)
       .forEach((todos, date) => {
         const weekday = format(parse(date, DATE_FORMAT, Date.now()), "EEEE");
@@ -91,8 +98,9 @@ module.exports = (db, args) => {
           .value();
 
         console.log();
-      });
+      })
+      .value();
   }
-
-  todos.value();
 };
+
+module.exports = { search, render };
