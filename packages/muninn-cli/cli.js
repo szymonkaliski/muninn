@@ -81,7 +81,7 @@ if (command === "cache") {
 } else if (command === "backlinks") {
   backlinks.render(db, { ...args, root });
 } else if (command === "search") {
-  search.render(db, { ...args, root });
+  search.render(db, args);
 } else if (command === "tasks") {
-  tasks.render(db, { ...args, root });
+  tasks.render(db, args);
 }

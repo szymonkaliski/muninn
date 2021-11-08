@@ -7,7 +7,7 @@ const { CACHE_PATH } = require("../src/consts");
 const REPO = path.join(__dirname, "/data2/");
 // const REPO = "/Users/szymon/Documents/Dropbox/Wiki/";
 
-// rimraf.sync(`${CACHE_PATH}/*.db`);
+rimraf.sync(`${CACHE_PATH}/*.db`);
 
 console.time("run");
 

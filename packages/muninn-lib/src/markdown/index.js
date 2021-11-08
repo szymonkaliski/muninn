@@ -1,4 +1,3 @@
-const map = require("unist-util-map");
 const markdown = require("remark-parse");
 const path = require("path");
 const stringify = require("remark-stringify");

@@ -69,7 +69,16 @@ const render = (db, args) => {
     chain(todos)
       .groupBy((task) => task.value)
       .forEach((todos, date) => {
-        const weekday = format(parse(date, DATE_FORMAT, Date.now()), "EEEE");
+        let weekday;
+
+        try {
+          weekday = format(parse(date, DATE_FORMAT, Date.now()), "EEEE");
+        } catch (e) {
+          console.log("Parsing error at: ", todos, date);
+          console.log(e);
+          process.exit(1);
+        }
+
         const dateStr = date === TODAY ? "Today" : date;
         const isOverdue = todos.some((d) => d.isOverdue);
         const color = isOverdue ? "red" : "green";

@@ -6,13 +6,15 @@ const search = (db, args) => {
   const results = db
     .prepare(
       `
-      SELECT * FROM notes WHERE text LIKE :text
+      SELECT * FROM notes
+      WHERE text LIKE :text
+      ${args.limit !== undefined && args.limit > 0 ? `LIMIT ${args.limit}` : ""}
       `
     )
     .all({ text: `%${args.text}%` });
 
   return chain(results)
-    .uniqBy('path')
+    .uniqBy("path")
     .map((d) => {
       const mdast = JSON.parse(d.mdast);
       const text = stringifyMdast(mdast);
