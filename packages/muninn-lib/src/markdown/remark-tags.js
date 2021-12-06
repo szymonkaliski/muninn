@@ -1,4 +1,4 @@
-const TAG_REGEX = /^@(\w+)(\((.+?)\))?/
+const TAG_REGEX = /^@(\w+)(\((.+?)\))?/;
 
 function tokenizeTags(eat, value, silent) {
   const match = TAG_REGEX.exec(value);
@@ -13,7 +13,7 @@ function tokenizeTags(eat, value, silent) {
       value: match[0],
       tagName: match[1],
       tagValue: match[3],
-      children: [{ type: "text", value: match[0] }]
+      children: [{ type: "text", value: match[0] }],
     });
   }
 }
@@ -30,11 +30,12 @@ function remarkTags() {
     const Compiler = this.Compiler;
     const visitors = Compiler.prototype.visitors;
 
-    visitors.tag = node => node.value;
+    visitors.tag = (node) => node.value;
   }
 
   if (this.Parser) {
     const Parser = this.Parser;
+
     const tokenizers = Parser.prototype.inlineTokenizers;
     const methods = Parser.prototype.inlineMethods;
 
